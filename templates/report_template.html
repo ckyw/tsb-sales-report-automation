@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <title>탭샵바 일간 매출 리포트</title>
+    <style>
+      body { font-family: Arial, sans-serif; color: #0f172a; margin: 40px; }
+      h1, h2 { color: #0f172a; }
+      .meta { color: #475569; margin-bottom: 24px; }
+      .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 24px; }
+      .card { border: 1px solid #cbd5e1; border-radius: 10px; padding: 16px; background: #f8fafc; }
+      table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
+      th, td { border: 1px solid #cbd5e1; padding: 8px; text-align: left; }
+      th { background: #e2e8f0; }
+      pre { white-space: pre-wrap; font-family: Arial, sans-serif; line-height: 1.6; }
+    </style>
+  </head>
+  <body>
+    <h1>탭샵바 일간 매출 리포트</h1>
+    <div class="meta">보고 기준일: {{ report_date }}</div>
+
+    <div class="grid">
+      <div class="card">총매출: {{ "{:,.0f}".format(metrics.total_gross_sales) }}원</div>
+      <div class="card">순매출: {{ "{:,.0f}".format(metrics.total_net_sales) }}원</div>
+      <div class="card">주문 수: {{ "{:,}".format(metrics.order_count) }}건</div>
+      <div class="card">객단가: {{ "{:,.0f}".format(metrics.average_order_value) }}원</div>
+    </div>
+
+    <h2>카테고리 매출</h2>
+    <table>
+      <thead>
+        <tr><th>카테고리</th><th>순매출</th></tr>
+      </thead>
+      <tbody>
+        {% for row in metrics.category_sales[:10] %}
+        <tr><td>{{ row.name if row.name is defined else row["name"] }}</td><td>{{ "{:,.0f}".format(row.sales if row.sales is defined else row["sales"]) }}원</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <h2>상품 매출 TOP N</h2>
+    <table>
+      <thead>
+        <tr><th>상품</th><th>순매출</th></tr>
+      </thead>
+      <tbody>
+        {% for row in metrics.top_products %}
+        <tr><td>{{ row.name if row.name is defined else row["name"] }}</td><td>{{ "{:,.0f}".format(row.sales if row.sales is defined else row["sales"]) }}원</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <h2>AI 요약</h2>
+    <pre>{{ ai_summary }}</pre>
+  </body>
+</html>

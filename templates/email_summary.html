@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <title>일간 매출 요약</title>
+    <style>
+      body { font-family: Arial, sans-serif; color: #0f172a; line-height: 1.6; }
+      .wrap { max-width: 720px; margin: 0 auto; padding: 24px; background: #f8fafc; }
+      .card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; margin-bottom: 16px; }
+      h1, h2 { margin: 0 0 12px; }
+      ul { padding-left: 18px; }
+      .muted { color: #475569; font-size: 14px; }
+      .warning { color: #b45309; font-weight: bold; }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <div class="card">
+        <h1>탭샵바 {{ report_date }} 일간 매출 요약</h1>
+        <p class="muted">자동 생성 리포트{% if dry_run %} / DRY RUN{% endif %}</p>
+        {% if dry_run %}
+        <p class="warning">현재 DRY_RUN=true 이므로 실제 메일링 리스트 대신 테스트 수신자에게만 전송되거나 발송이 생략됩니다.</p>
+        {% endif %}
+      </div>
+
+      <div class="card">
+        <h2>핵심 KPI</h2>
+        <ul>
+          <li>총매출: {{ "{:,.0f}".format(metrics.total_gross_sales) }}원</li>
+          <li>순매출: {{ "{:,.0f}".format(metrics.total_net_sales) }}원</li>
+          <li>주문 수: {{ "{:,}".format(metrics.order_count) }}건</li>
+          <li>객단가: {{ "{:,.0f}".format(metrics.average_order_value) }}원</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h2>주요 변화 3~5개</h2>
+        <ul>
+          {% for item in highlights %}
+          <li>{{ item }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+
+      <div class="card">
+        <h2>운영상 확인 포인트</h2>
+        <p>{{ ai_summary.splitlines()[-1] if ai_summary.splitlines() else "운영 액션 제안 없음" }}</p>
+      </div>
+    </div>
+  </body>
+</html>

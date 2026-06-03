@@ -1,0 +1,4 @@
+# Asia/Seoul 기준 매일 오전 10시 실행 예시
+# 서버가 UTC이면 01:00 UTC = 10:00 KST 입니다.
+CRON_TZ=Asia/Seoul
+0 10 * * * cd /Users/your-user/tsb-sales-report-automation && /usr/bin/python3 -m src.main >> logs/cron.log 2>&1
