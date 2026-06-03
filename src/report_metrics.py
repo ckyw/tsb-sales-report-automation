@@ -28,6 +28,7 @@ class MetricsPackage:
     category_sales: list[dict[str, Any]]
     top_products: list[dict[str, Any]]
     store_sales: list[dict[str, Any]]
+    pos_type_sales: list[dict[str, Any]]
     anomalies: list[str]
     source_row_count: int
 
@@ -46,6 +47,7 @@ class MetricsPackage:
             "category_sales": self.category_sales[:10],
             "top_products": self.top_products,
             "store_sales": self.store_sales,
+            "pos_type_sales": self.pos_type_sales,
             "anomalies": self.anomalies,
         }
 
@@ -79,7 +81,8 @@ def build_metrics(report_date: date, bundle: QueryBundle, top_n_products: int) -
     previous_week_summary = _summary(previous_week)
 
     hourly_sales = (
-        current.groupby("sale_hour", dropna=False)["net_sales"]
+        current[current["sale_hour"].notna()]
+        .groupby("sale_hour", dropna=False)["net_sales"]
         .sum()
         .reset_index()
         .sort_values("sale_hour")
@@ -89,7 +92,8 @@ def build_metrics(report_date: date, bundle: QueryBundle, top_n_products: int) -
     category_sales = _group_sales(current, "category_name")
     top_products = _group_sales(current, "product_name", limit=top_n_products)
     store_sales = _group_sales(current, "store_name")
-    anomalies = _detect_anomalies(hourly_sales, category_sales, top_products)
+    pos_type_sales = _group_sales(current, "pos_type")
+    anomalies = _detect_anomalies(hourly_sales, category_sales, top_products, pos_type_sales)
 
     return MetricsPackage(
         report_date=report_date,
@@ -103,6 +107,7 @@ def build_metrics(report_date: date, bundle: QueryBundle, top_n_products: int) -
         category_sales=category_sales,
         top_products=top_products,
         store_sales=store_sales,
+        pos_type_sales=pos_type_sales,
         anomalies=anomalies,
         source_row_count=len(current.index),
     )
@@ -114,12 +119,17 @@ def _prepare_dataframe(dataframe: pd.DataFrame) -> pd.DataFrame:
             columns=[
                 "sale_date",
                 "sale_hour",
+                "row_key",
                 "order_id",
                 "category_name",
                 "product_name",
                 "store_name",
                 "gross_sales",
                 "net_sales",
+                "discount_amount",
+                "supply_amount",
+                "vat_amount",
+                "pos_type",
                 "quantity",
             ]
         )
@@ -129,7 +139,7 @@ def _prepare_dataframe(dataframe: pd.DataFrame) -> pd.DataFrame:
     for column in numeric_columns:
         if column in normalized.columns:
             normalized[column] = pd.to_numeric(normalized[column], errors="coerce").fillna(0.0)
-    normalized["sale_hour"] = pd.to_numeric(normalized["sale_hour"], errors="coerce").fillna(0).astype(int)
+    normalized["sale_hour"] = pd.to_numeric(normalized["sale_hour"], errors="coerce")
     normalized["order_id"] = normalized["order_id"].fillna("").astype(str)
     return normalized
 
@@ -172,6 +182,7 @@ def _detect_anomalies(
     hourly_sales: list[dict[str, Any]],
     category_sales: list[dict[str, Any]],
     top_products: list[dict[str, Any]],
+    pos_type_sales: list[dict[str, Any]],
 ) -> list[str]:
     messages: list[str] = []
 
@@ -180,6 +191,8 @@ def _detect_anomalies(
         messages.append(
             f"최고 매출 시간대는 {int(peak_hour['hour']):02d}시이며 순매출은 {peak_hour['sales']:,.0f}원입니다."
         )
+    else:
+        messages.append("현재 데이터마트에는 시간 컬럼이 없어 시간대별 매출 분석은 제공되지 않습니다.")
 
     if category_sales:
         lead_category = category_sales[0]
@@ -191,6 +204,12 @@ def _detect_anomalies(
         lead_product = top_products[0]
         messages.append(
             f"상품 매출 1위는 {lead_product['name']}이며 순매출은 {lead_product['sales']:,.0f}원입니다."
+        )
+
+    if pos_type_sales:
+        lead_pos_type = pos_type_sales[0]
+        messages.append(
+            f"POS 유형 기준 1위는 {lead_pos_type['name']}이며 순매출은 {lead_pos_type['sales']:,.0f}원입니다."
         )
 
     return messages

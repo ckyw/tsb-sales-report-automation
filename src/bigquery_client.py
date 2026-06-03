@@ -35,26 +35,63 @@ class BigQuerySalesClient:
 
     def _run_daily_query(self, target_date: date) -> pd.DataFrame:
         settings = self.settings
+        order_id_expression = (
+            f"CAST({settings.order_id_column} AS STRING)"
+            if settings.order_id_column
+            else f"CAST({settings.row_key_column} AS STRING)"
+        )
+        sale_hour_expression = (
+            f"SAFE_CAST({settings.sale_hour_column} AS INT64)"
+            if settings.sale_hour_column
+            else "NULL"
+        )
         quantity_expression = (
             f"SAFE_CAST({settings.quantity_column} AS FLOAT64)"
             if settings.quantity_column
             else "NULL"
         )
+        discount_expression = (
+            f"SAFE_CAST({settings.discount_amount_column} AS FLOAT64)"
+            if settings.discount_amount_column
+            else "0"
+        )
+        supply_expression = (
+            f"SAFE_CAST({settings.supply_amount_column} AS FLOAT64)"
+            if settings.supply_amount_column
+            else "0"
+        )
+        vat_expression = (
+            f"SAFE_CAST({settings.vat_amount_column} AS FLOAT64)"
+            if settings.vat_amount_column
+            else "0"
+        )
+        pos_type_expression = (
+            f"COALESCE(CAST({settings.pos_type_column} AS STRING), 'Unknown POS')"
+            if settings.pos_type_column
+            else "'Unknown POS'"
+        )
 
-        # NOTE: Replace or extend this query if your POS datamart requires joins or pre-aggregation.
+        # NOTE: This query is aligned to the provided daily POS mart schema.
+        # If there is no explicit order_id or hour column, row_key is used as a fallback ID
+        # and hourly analysis remains unavailable until the mart exposes a time dimension.
         query = f"""
         SELECT
-          DATE({settings.date_column}, "Asia/Seoul") AS sale_date,
-          EXTRACT(HOUR FROM DATETIME({settings.date_column}, "Asia/Seoul")) AS sale_hour,
-          CAST({settings.order_id_column} AS STRING) AS order_id,
+          {settings.date_column} AS sale_date,
+          {sale_hour_expression} AS sale_hour,
+          CAST({settings.row_key_column} AS STRING) AS row_key,
+          {order_id_expression} AS order_id,
           COALESCE(CAST({settings.category_column} AS STRING), "Uncategorized") AS category_name,
           COALESCE(CAST({settings.product_column} AS STRING), "Unknown Product") AS product_name,
           COALESCE(CAST({settings.store_column} AS STRING), "Unknown Store") AS store_name,
           SAFE_CAST({settings.gross_sales_column} AS FLOAT64) AS gross_sales,
           SAFE_CAST({settings.net_sales_column} AS FLOAT64) AS net_sales,
+          {discount_expression} AS discount_amount,
+          {supply_expression} AS supply_amount,
+          {vat_expression} AS vat_amount,
+          {pos_type_expression} AS pos_type,
           {quantity_expression} AS quantity
         FROM {settings.table_fqn}
-        WHERE DATE({settings.date_column}, "Asia/Seoul") = @target_date
+        WHERE {settings.date_column} = @target_date
         """
 
         job_config = bigquery.QueryJobConfig(

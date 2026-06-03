@@ -81,19 +81,23 @@ cp .env.example .env
 
 ## BigQuery 쿼리 커스터마이징
 
+현재 기본 연결 대상 테이블은 `okpos-sales-load.marts.fact_total_sales` 입니다.
+
 현재 `src/bigquery_client.py` 는 아래 전제를 두고 있습니다.
 
-- POS 데이터마트에 `sale_timestamp`, `gross_sales`, `net_sales`, `order_id` 등 기본 컬럼이 존재
-- 한 행이 주문 또는 주문 상세 수준 데이터
-- `DATE(timestamp, "Asia/Seoul")` 기준으로 보고일 필터 가능
+- 첨부해주신 스키마처럼 `sales_date`, `row_key`, `store_name`, `category_mid`, `product_name`, `quantity`, `gross_sales`, `discount_amount`, `net_sales`, `supply_amount`, `vat_amount`, `pos_type` 컬럼이 존재
+- `sales_date` 는 `DATE` 타입이라 날짜 단위 필터가 가능
+- 명시적 `order_id` 가 없으면 `row_key` 를 대체 집계 키로 사용
+- 시간 컬럼이 없으면 시간대별 분석은 비활성화
 
 실제 데이터마트에서 아래 케이스가 있으면 반드시 수정하세요.
 
 - 조인이 필요한 스타 스키마 구조
 - 환불/취소 데이터 분리 테이블
 - 매장 기준 권한 필터
-- 카테고리/상품명이 코드값으로만 저장된 구조
-- 시간 컬럼이 UTC 문자열 등 비표준 타입인 구조
+- 카테고리 코드 `category_mid` 를 사람이 읽는 이름으로 바꾸기 위한 매핑 테이블이 필요한 구조
+- 주문 수를 정확히 계산하려면 별도 주문 ID 컬럼이 필요한 구조
+- 시간 컬럼이 없어 시간대별 분석을 따로 보강해야 하는 구조
 
 ## 이메일 수신자 관리
 

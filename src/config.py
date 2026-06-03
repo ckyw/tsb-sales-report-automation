@@ -19,11 +19,17 @@ class BigQuerySettings:
     date_column: str
     gross_sales_column: str
     net_sales_column: str
-    order_id_column: str
+    row_key_column: str
+    order_id_column: str | None
     category_column: str
     product_column: str
     store_column: str
     quantity_column: str | None
+    discount_amount_column: str | None
+    supply_amount_column: str | None
+    vat_amount_column: str | None
+    pos_type_column: str | None
+    sale_hour_column: str | None
 
     @property
     def table_fqn(self) -> str:
@@ -92,11 +98,17 @@ def load_config() -> AppConfig:
             date_column=_required("BQ_DATE_COLUMN"),
             gross_sales_column=_required("BQ_GROSS_SALES_COLUMN"),
             net_sales_column=_required("BQ_NET_SALES_COLUMN"),
-            order_id_column=_required("BQ_ORDER_ID_COLUMN"),
+            row_key_column=os.getenv("BQ_ROW_KEY_COLUMN", "row_key"),
+            order_id_column=os.getenv("BQ_ORDER_ID_COLUMN") or None,
             category_column=_required("BQ_CATEGORY_COLUMN"),
             product_column=_required("BQ_PRODUCT_COLUMN"),
             store_column=os.getenv("BQ_STORE_COLUMN", "store_name"),
             quantity_column=os.getenv("BQ_QUANTITY_COLUMN") or None,
+            discount_amount_column=os.getenv("BQ_DISCOUNT_AMOUNT_COLUMN") or None,
+            supply_amount_column=os.getenv("BQ_SUPPLY_AMOUNT_COLUMN") or None,
+            vat_amount_column=os.getenv("BQ_VAT_AMOUNT_COLUMN") or None,
+            pos_type_column=os.getenv("BQ_POS_TYPE_COLUMN") or None,
+            sale_hour_column=os.getenv("BQ_SALE_HOUR_COLUMN") or None,
         ),
         openai=OpenAISettings(
             api_key=os.getenv("OPENAI_API_KEY"),
